@@ -37,10 +37,10 @@ public class PositionUpdateProcessor {
                 for (ConsumerRecord<String, String> record : records) {
                     String line = record.value();
                     Utils.GpsPos gpsPos = Utils.extractCoordinates(line);
-                    if (gpsPos != null) {
+                    if (record.key() != null && gpsPos != null) { // Ensuring key and GPS position are not null
                         int delay = Utils.requestDelay(record.key(), gpsPos);
                         String routeTimingEvent = "id: " + record.key() + ", delay: " + delay;
-                        producer.send(new ProducerRecord<>(ROUTE_TIMING_TOPIC, routeTimingEvent));
+                        producer.send(new ProducerRecord<>(ROUTE_TIMING_TOPIC, record.key(), routeTimingEvent));
                     }
                 }
             }
@@ -48,5 +48,6 @@ public class PositionUpdateProcessor {
             consumer.close();
             producer.close();
         }
+
     }
 }

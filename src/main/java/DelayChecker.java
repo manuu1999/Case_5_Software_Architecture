@@ -25,9 +25,18 @@ public class DelayChecker {
             while (true) {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
                 for (ConsumerRecord<String, String> record : records) {
-                    Integer delay = Utils.extractDelay(record.value());
-                    if (delay != null && delay > 180) { // 3 minutes in seconds
-                        System.out.println("Significant delay detected for delivery ID: " + record.key());
+                    try {
+                        String[] parts = record.value().split(", ");
+                        if (parts.length > 1) {
+                            String id = parts[0].split(": ")[1];
+                            Integer delay = Integer.parseInt(parts[1].split(": ")[1]);
+                            System.out.println("Processing delay for ID: " + id + " with delay: " + delay + " seconds");
+                            if (delay > 180) {
+                                System.out.println("Significant delay detected for delivery ID: " + id);
+                            }
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Error processing record: " + record.value() + " with error: " + e.getMessage());
                     }
                 }
             }
