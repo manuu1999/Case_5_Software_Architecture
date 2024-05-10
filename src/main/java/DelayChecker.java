@@ -1,7 +1,9 @@
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
@@ -10,6 +12,7 @@ public class DelayChecker {
 
     private static final String KAFKA_BROKER = "192.168.111.10:9092";
     private static final String ROUTE_TIMING_TOPIC = "group1234-route-timing";
+    private static final String DELAYS_TOPIC = "delays";
 
     public static void main(String[] args) {
         Properties consumerProps = new Properties();
@@ -20,6 +23,13 @@ public class DelayChecker {
 
         KafkaConsumer<String, String> consumer = new KafkaConsumer<>(consumerProps);
         consumer.subscribe(Collections.singletonList(ROUTE_TIMING_TOPIC));
+
+        Properties producerProps = new Properties();
+        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA_BROKER);
+        producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
+        producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
+
+        KafkaProducer<String, String> producer = new KafkaProducer<>(producerProps);
 
         try {
             while (true) {
@@ -33,6 +43,9 @@ public class DelayChecker {
                             System.out.println("Processing delay for ID: " + id + " with delay: " + delay + " seconds");
                             if (delay > 180) {
                                 System.out.println("Significant delay detected for delivery ID: " + id);
+                                String message = "id: " + id + ", delay: " + delay;
+                                // add delay to the Topic from the Dashboard
+                                producer.send(new ProducerRecord<>(DELAYS_TOPIC, message));
                             }
                         }
                     } catch (Exception e) {
@@ -42,6 +55,7 @@ public class DelayChecker {
             }
         } finally {
             consumer.close();
+            producer.close();
         }
     }
 }
